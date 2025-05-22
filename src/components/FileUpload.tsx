@@ -5,15 +5,48 @@ import UploadArea from './UploadArea';
 import UploadSourceButton from './UploadSourceButton';
 import InfoBox from './InfoBox';
 import { Button } from '@/components/ui/button';
-import { Upload, Folder, Cloud } from 'lucide-react';
+import { Upload, Folder, Cloud, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+interface FileWithMetadata extends File {
+  fileType?: 'activity' | 'organisation';
+  displayName?: string;
+}
 
 const FileUpload: React.FC = () => {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<FileWithMetadata[]>([]);
+  const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'uploaded'>('initial');
   const { toast } = useToast();
 
   const handleFilesSelected = (files: File[]) => {
-    setSelectedFiles(files);
+    // Convert to FileWithMetadata
+    const filesWithMetadata: FileWithMetadata[] = files.map(file => ({
+      ...file,
+      fileType: undefined,
+      displayName: file.name,
+    }));
+    setSelectedFiles(filesWithMetadata);
+    setUploadState('uploading');
+    
+    toast({
+      title: "Files received",
+      description: `${files.length} file(s) ready for configuration`,
+    });
+  };
+
+  const updateFileMetadata = (index: number, field: 'fileType' | 'displayName', value: any) => {
+    setSelectedFiles(prev => {
+      const updated = [...prev];
+      if (field === 'fileType') {
+        updated[index].fileType = value as 'activity' | 'organisation';
+      } else if (field === 'displayName') {
+        updated[index].displayName = value as string;
+      }
+      return updated;
+    });
   };
 
   const handleLocalUpload = () => {
@@ -35,18 +68,27 @@ const FileUpload: React.FC = () => {
   };
 
   const handleContinue = () => {
+    // Check if all files have been configured
+    const isAllConfigured = selectedFiles.every(file => file.fileType && file.displayName);
+    
+    if (!isAllConfigured) {
+      toast({
+        title: "Configuration Required",
+        description: "Please set file type for all files",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setUploadState('uploaded');
     toast({
       title: "Continue",
       description: `Proceeding to step 2 with ${selectedFiles.length} files`,
     });
   };
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      <StepIndicator currentStep={1} totalSteps={5} className="mb-8" />
-      
-      <h2 className="text-2xl font-bold mb-6 text-center">Upload Your Data Files</h2>
-      
+  const renderInitialUploadUI = () => (
+    <>
       <UploadArea 
         onFilesSelected={handleFilesSelected} 
         className="mb-6"
@@ -69,32 +111,99 @@ const FileUpload: React.FC = () => {
           onClick={handleOneDriveUpload}
         />
       </div>
-      
-      {selectedFiles.length > 0 && (
-        <div className="mb-8 bg-white border rounded-lg p-4">
-          <h3 className="font-semibold mb-2">Selected Files ({selectedFiles.length})</h3>
-          <ul className="max-h-40 overflow-y-auto">
-            {selectedFiles.map((file, index) => (
-              <li key={index} className="text-sm py-1 border-b last:border-b-0 flex justify-between">
-                <span className="truncate max-w-[80%]">{file.name}</span>
-                <span className="text-gray-500">{(file.size / 1024).toFixed(0)} KB</span>
-              </li>
-            ))}
-          </ul>
+    </>
+  );
+
+  const renderFileConfiguration = () => (
+    <div className="space-y-4">
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-md mb-4">
+        <p className="text-sm text-blue-700 flex items-center">
+          <Upload className="w-4 h-4 mr-2" />
+          Please configure your files before continuing
+        </p>
+      </div>
+
+      {selectedFiles.map((file, index) => (
+        <div key={index} className="p-4 bg-white rounded-lg border shadow-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-gray-100 p-2 rounded-full">
+              <FileText className="h-5 w-5 text-gray-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-sm truncate">{file.name}</p>
+              <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(0)} KB</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+            <div className="space-y-2">
+              <Label htmlFor={`display-name-${index}`}>Display Name</Label>
+              <Input 
+                id={`display-name-${index}`}
+                value={file.displayName || ''} 
+                onChange={(e) => updateFileMetadata(index, 'displayName', e.target.value)}
+                placeholder="Enter a display name"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`file-type-${index}`}>File Type</Label>
+              <Select 
+                onValueChange={(value) => updateFileMetadata(index, 'fileType', value)}
+                value={file.fileType}
+              >
+                <SelectTrigger id={`file-type-${index}`} className="w-full">
+                  <SelectValue placeholder="Select file type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="activity">Activity File</SelectItem>
+                  <SelectItem value="organisation">Organisation File</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
-      )}
-      
-      <InfoBox className="mb-8" />
-      
-      <div className="flex justify-end">
+      ))}
+
+      <div className="flex justify-between mt-4">
         <Button 
-          className="px-8"
-          disabled={selectedFiles.length === 0}
-          onClick={handleContinue}
+          variant="outline" 
+          onClick={() => {
+            setSelectedFiles([]);
+            setUploadState('initial');
+          }}
         >
-          Continue
+          Cancel
         </Button>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <StepIndicator currentStep={1} totalSteps={5} className="mb-8" />
+      
+      <h2 className="text-2xl font-bold mb-6 text-center">Upload Your Data Files</h2>
+      
+      {uploadState === 'initial' && renderInitialUploadUI()}
+      
+      {uploadState !== 'initial' && renderFileConfiguration()}
+      
+      {(selectedFiles.length > 0 || uploadState !== 'initial') && (
+        <div className="mt-8">
+          <InfoBox className="mb-8" />
+          
+          <div className="flex justify-end">
+            <Button 
+              className="px-8"
+              disabled={selectedFiles.length === 0}
+              onClick={handleContinue}
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
