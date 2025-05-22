@@ -6,9 +6,10 @@ import { useToast } from '@/components/ui/use-toast';
 
 interface IATIRegistryFormProps {
   onBack: () => void;
+  onNext: () => void;
 }
 
-const IATIRegistryForm: React.FC<IATIRegistryFormProps> = ({ onBack }) => {
+const IATIRegistryForm: React.FC<IATIRegistryFormProps> = ({ onBack, onNext }) => {
   const { toast } = useToast();
 
   const handleNext = () => {
@@ -17,6 +18,7 @@ const IATIRegistryForm: React.FC<IATIRegistryFormProps> = ({ onBack }) => {
       title: "Next Step",
       description: "Moving to validation & preview step",
     });
+    onNext();
   };
 
   const handleDashboard = () => {

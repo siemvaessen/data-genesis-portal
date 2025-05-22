@@ -5,6 +5,7 @@ import UploadArea from './UploadArea';
 import UploadSourceButton from './UploadSourceButton';
 import InfoBox from './InfoBox';
 import IATIRegistryForm from './IATIRegistryForm';
+import ValidationAndPublish, { FileData } from './ValidationAndPublish';
 import { Button } from '@/components/ui/button';
 import { Upload, Folder, Cloud, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -19,9 +20,11 @@ interface FileWithMetadata extends File {
 
 const FileUpload: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<FileWithMetadata[]>([]);
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'uploaded'>('initial');
   const { toast } = useToast();
+  
+  const [processedFiles, setProcessedFiles] = useState<FileData[]>([]);
 
   const handleFilesSelected = (files: File[]) => {
     // Convert to FileWithMetadata
@@ -84,6 +87,23 @@ const FileUpload: React.FC = () => {
     
     setUploadState('uploaded');
     setCurrentStep(2);
+    
+    // Prepare files for the validation step
+    const filesWithData: FileData[] = selectedFiles.map((file, index) => ({
+      id: `file-${index}`,
+      name: file.name,
+      displayName: file.displayName || file.name,
+      fileType: file.fileType || 'activity',
+      uploadDate: new Date().toLocaleDateString(),
+      isValid: Math.random() > 0.2, // Randomly determine validity for demo purposes
+      publishStatus: 'draft',
+      xmlUrl: '#',
+      iatiRegistryUrl: '#',
+      iatiOrgRegistryUrl: '#'
+    }));
+    
+    setProcessedFiles(filesWithData);
+    
     toast({
       title: "Continue",
       description: `Proceeding to step 2`,
@@ -91,7 +111,28 @@ const FileUpload: React.FC = () => {
   };
 
   const handleBack = () => {
+    if (currentStep === 2) setCurrentStep(1);
+    else if (currentStep === 3) setCurrentStep(2);
+  };
+  
+  const handleProceedToValidation = () => {
+    setCurrentStep(3);
+    toast({
+      title: "Files Processed",
+      description: "Your files are ready for validation and publishing",
+    });
+  };
+  
+  const handleCompleteProcess = () => {
+    toast({
+      title: "Process Completed",
+      description: "All files have been processed successfully",
+    });
+    // Reset to initial state or redirect to dashboard
     setCurrentStep(1);
+    setSelectedFiles([]);
+    setProcessedFiles([]);
+    setUploadState('initial');
   };
 
   const renderInitialUploadUI = () => (
@@ -221,7 +262,18 @@ const FileUpload: React.FC = () => {
       )}
 
       {currentStep === 2 && (
-        <IATIRegistryForm onBack={handleBack} />
+        <IATIRegistryForm 
+          onBack={handleBack} 
+          onNext={handleProceedToValidation}
+        />
+      )}
+      
+      {currentStep === 3 && (
+        <ValidationAndPublish
+          files={processedFiles}
+          onBack={handleBack}
+          onComplete={handleCompleteProcess}
+        />
       )}
     </div>
   );
