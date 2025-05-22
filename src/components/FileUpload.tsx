@@ -4,6 +4,7 @@ import StepIndicator from './StepIndicator';
 import UploadArea from './UploadArea';
 import UploadSourceButton from './UploadSourceButton';
 import InfoBox from './InfoBox';
+import IATIRegistryForm from './IATIRegistryForm';
 import { Button } from '@/components/ui/button';
 import { Upload, Folder, Cloud, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -18,6 +19,7 @@ interface FileWithMetadata extends File {
 
 const FileUpload: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<FileWithMetadata[]>([]);
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'uploaded'>('initial');
   const { toast } = useToast();
 
@@ -81,10 +83,15 @@ const FileUpload: React.FC = () => {
     }
     
     setUploadState('uploaded');
+    setCurrentStep(2);
     toast({
       title: "Continue",
-      description: `Proceeding to step 2 with ${selectedFiles.length} files`,
+      description: `Proceeding to step 2`,
     });
+  };
+
+  const handleBack = () => {
+    setCurrentStep(1);
   };
 
   const renderInitialUploadUI = () => (
@@ -181,28 +188,40 @@ const FileUpload: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <StepIndicator currentStep={1} totalSteps={5} className="mb-8" />
+      <StepIndicator 
+        currentStep={currentStep} 
+        totalSteps={5} 
+        className="mb-8" 
+      />
       
-      <h2 className="text-2xl font-bold mb-6 text-center">Upload Your Data Files</h2>
-      
-      {uploadState === 'initial' && renderInitialUploadUI()}
-      
-      {uploadState !== 'initial' && renderFileConfiguration()}
-      
-      {(selectedFiles.length > 0 || uploadState !== 'initial') && (
-        <div className="mt-8">
-          <InfoBox className="mb-8" />
+      {currentStep === 1 && (
+        <>
+          <h2 className="text-2xl font-bold mb-6 text-center">Upload Your Data Files</h2>
           
-          <div className="flex justify-end">
-            <Button 
-              className="px-8"
-              disabled={selectedFiles.length === 0}
-              onClick={handleContinue}
-            >
-              Continue
-            </Button>
-          </div>
-        </div>
+          {uploadState === 'initial' && renderInitialUploadUI()}
+          
+          {uploadState !== 'initial' && renderFileConfiguration()}
+          
+          {(selectedFiles.length > 0 || uploadState !== 'initial') && (
+            <div className="mt-8">
+              <InfoBox className="mb-8" />
+              
+              <div className="flex justify-end">
+                <Button 
+                  className="px-8"
+                  disabled={selectedFiles.length === 0}
+                  onClick={handleContinue}
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {currentStep === 2 && (
+        <IATIRegistryForm onBack={handleBack} />
       )}
     </div>
   );

@@ -13,6 +13,17 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({
   totalSteps,
   className
 }) => {
+  const getStepLabel = (step: number) => {
+    switch (step) {
+      case 1: return "Upload Data Files";
+      case 2: return "Sign In and Connect";
+      case 3: return "Validate & Preview";
+      case 4: return "Enrichment";
+      case 5: return "Publish";
+      default: return `Step ${step}`;
+    }
+  };
+  
   return (
     <div className={cn("flex flex-col items-center space-y-2", className)}>
       <div className="flex items-center space-x-1">
@@ -42,7 +53,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({
         ))}
       </div>
       <p className="text-sm font-medium text-gray-700">
-        Step {currentStep} of {totalSteps}: Upload Data Files
+        Step {currentStep} of {totalSteps}: {getStepLabel(currentStep)}
       </p>
     </div>
   );
